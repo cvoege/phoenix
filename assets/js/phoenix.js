@@ -871,7 +871,7 @@ export class Socket {
       let {topic, event, payload, ref} = msg
       if (ref && ref === this.pendingHeartbeatRef) { this.pendingHeartbeatRef = null }
 
-      this.log("receive", `${payload.status || ""} ${topic} ${event} ${ref && `(${ref})` || ""}`, payload)
+      this.log("receive", `${payload.status || ""} ${topic} ${event} ${ref ? `(${ref})` : ""}`, payload)
       this.channels.filter(channel => channel.isMember(topic))
                    .forEach(channel => channel.trigger(event, payload, ref))
       this.stateChangeCallbacks.message.forEach(callback => callback(msg))
@@ -879,7 +879,7 @@ export class Socket {
   }
 }
 
-export var Presence = {
+export const Presence = {
 
   syncState(currentState, newState, onJoin, onLeave) {
     let state = this.clone(currentState)
@@ -913,10 +913,10 @@ export var Presence = {
     return this.syncDiff(state, {joins: joins, leaves: leaves}, onJoin, onLeave)
   },
 
-  syncDiff(currentState, {joins, leaves}, onJoin, onLeave) {
+  syncDiff(currentState, {joins, leaves}, onJoinOpt, onLeaveOpt) {
     let state = this.clone(currentState)
-    if (!onJoin) { onJoin = function() {} }
-    if (!onLeave) { onLeave = function() {} }
+    let onJoin = onJoinOpt || noop
+    let onLeave = onLeaveOpt || noop
 
     this.map(joins, (key, newPresence) => {
       let currentPresence = state[key]
@@ -939,8 +939,8 @@ export var Presence = {
     return state
   },
 
-  list(presences, chooser) {
-    if (!chooser) { chooser = function(key, pres) { return pres } }
+  list(presences, chooserOpt) {
+    let chooser = chooserOpt || function(key, pres) { return pres }
 
     return this.map(presences, (key, presence) => chooser(key, presence))
   },
