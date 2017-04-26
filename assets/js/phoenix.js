@@ -166,6 +166,9 @@
 //       this.setState({users: Presence.list(room.presences, listBy)})
 //     })
 //
+
+/* global ActiveXObject */
+
 const VSN = "1.0.0"
 const SOCKET_STATES = {connecting: 0, open: 1, closing: 2, closed: 3}
 const DEFAULT_TIMEOUT = 10000
@@ -512,7 +515,7 @@ export class Ajax {
     if (ontimeout) { req.ontimeout = ontimeout }
 
     // Work around bug in IE9 that requires an attached onprogress handler
-    req.onprogress = () => {}
+    req.onprogress = noop
 
     req.send(body)
   }
@@ -606,16 +609,19 @@ export class LongPoll {
     this.closeAndRetry()
   }
 
+  parsePollResponse(resp) {
+    if (resp) {
+      this.token = resp.token
+      return resp
+    }
+    return {status: 0}
+  }
+
   poll() {
     if (!(this.readyState === SOCKET_STATES.open || this.readyState === SOCKET_STATES.connecting)) { return }
 
     Ajax.request("GET", this.endpointURL(), "application/json", null, this.timeout, this.ontimeout.bind(this), resp => {
-      if (resp) {
-        var {status, token, messages} = resp
-        this.token = token
-      } else {
-        var status = 0
-      }
+      let {status, messages} = this.parsePollResponse(resp)
 
       switch (status) {
         case 200:
